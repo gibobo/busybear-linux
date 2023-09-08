@@ -26,28 +26,12 @@ mount -o loop ${IMAGE_FILE} mnt
 set +e
 
 #
-# copy libraries, flattening symlink directory structure
-#
-copy_libs() {
-    for lib in $1/*.so*; do
-        if [[ ${lib} =~ (^libgomp.*|^libgfortran.*|.*\.py$) ]]; then
-            : # continue
-        elif [[ -e "$2/$(basename $lib)" ]]; then
-            : # continue
-        elif [[ -h "$lib" ]]; then
-            ln -s $(basename $(readlink $lib)) $2/$(basename $lib)
-        else
-            cp -a $lib $2/$(basename $lib)
-        fi
-    done
-}
-
-#
 # configure root filesystem
 #
 (
     set -e
 
+    echo "create directories"
     # create directories
     for dir in root bin dev etc lib lib/modules proc sbin sys tmp \
         usr usr/bin usr/sbin var var/run var/log var/tmp \
@@ -60,26 +44,29 @@ copy_libs() {
         mkdir -p mnt/${dir}
     done
 
-    # copy busybox and dropbear
-    cp build/busybox-${BUSYBOX_VERSION}/busybox mnt/bin/
-    cp build/dropbear-${DROPBEAR_VERSION}/dropbear mnt/sbin/
+    echo "copy busybox and dropbear"
+    # cp -p build/busybox-${BUSYBOX_VERSION}/busybox mnt/bin/
+    # cp -p build/dropbear-${DROPBEAR_VERSION}/dropbear mnt/sbin/
+    cp src/busybox/busybox      mnt/bin/
+    cp build/dropbear/dropbear  mnt/sbin/
 
-    # copy libraries
+    echo "copy libraries"
     if [ -d ${GCC_DIR}/sysroot/usr/lib${ARCH/riscv/}/${ABI}/ ]; then
         ABI_DIR=lib${ARCH/riscv/}/${ABI}
     else
         ABI_DIR=lib
     fi
-    LDSO_NAME=ld-linux-${ARCH}-${ABI}.so.1
-    LDSO_TARGET=$(readlink ${GCC_DIR}/sysroot/lib/${LDSO_NAME})
-    mkdir -p mnt/${ABI_DIR}/
-    copy_libs $(dirname ${GCC_DIR}/sysroot/lib/${LDSO_TARGET})/ mnt/${ABI_DIR}/
-    copy_libs ${GCC_DIR}/sysroot/usr/${ABI_DIR}/ mnt/${ABI_DIR}/
-    if [ ! -e mnt/lib/${LDSO_NAME} ]; then
-        ln -s /${ABI_DIR}/$(basename ${LDSO_TARGET}) mnt/lib/${LDSO_NAME}
-    fi
 
-    # final configuration
+    # ABI_DIR=lib64/lp64d
+    mkdir -p mnt/${ABI_DIR}
+    mkdir -p mnt/usr/${ABI_DIR}
+
+    LDSO_NAME=ld-linux-${ARCH}-${ABI}.so.1
+    cp -p ${GCC_DIR}/sysroot/lib/${LDSO_NAME} mnt/lib/${LDSO_NAME}
+    cp -RP ${GCC_DIR}/sysroot/${ABI_DIR}/* mnt/${ABI_DIR}
+    cp -RP ${GCC_DIR}/sysroot/usr/${ABI_DIR}/* mnt/usr/${ABI_DIR}
+
+    echo "final configuration"
     rsync -a etc/ mnt/etc/
     hash=$(openssl passwd -1 -salt xyzzy ${ROOT_PASSWORD})
     sed -i'' "s:\*:${hash}:" mnt/etc/shadow
@@ -105,8 +92,7 @@ else
     ls -l ${IMAGE_FILE}
 fi
 
-#
-# finish
-#
+
+echo "!! finish !!"
 umount mnt
 rmdir mnt

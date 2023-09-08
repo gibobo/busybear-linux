@@ -12,3 +12,6 @@ for i in /etc/init.d/S??*
 do
 	$i start
 done
+
+ifconfig eth0 10.0.2.15 up
+route add default gw 10.0.2.2

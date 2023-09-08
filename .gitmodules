@@ -1,3 +1,12 @@
-[submodule "riscv-pk"]
+[submodule "src/riscv-pk"]
 	path = src/riscv-pk
-	url = ../riscv-pk.git
+	url = https://github.com/riscv/riscv-pk.git
+[submodule "src/dropbear"]
+	path = src/dropbear
+	url = https://github.com/mkj/dropbear.git
+[submodule "src/busybox"]
+	path = src/busybox
+	url = https://git.busybox.net/busybox.git
+[submodule "src/linux"]
+	path = src/linux
+	url = https://kernel.googlesource.com/pub/scm/linux/kernel/git/stable/linux.git

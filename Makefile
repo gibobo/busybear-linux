@@ -1,7 +1,11 @@
 all: busybear.bin
 
 clean:
-	rm -fr build busybear.bin
+	rm -fr \
+		build \
+		src/riscv-pk/build/bbl \
+		src/linux/vmlinux \
+		src/busybox/busybox
 
 distclean: clean
 	rm -fr archives

@@ -1,0 +1,75 @@
+From 9759850a05ccf2cde83a2e49575b41ee22b3097c Mon Sep 17 00:00:00 2001
+From: Gibobo <gibobo831521.dc@gmail.com>
+Date: Tue, 5 Sep 2023 11:24:18 +0800
+Subject: [PATCH 1/1] patch for stime issue
+
+---
+ coreutils/date.c         | 5 ++++-
+ libbb/missing_syscalls.c | 8 --------
+ util-linux/rdate.c       | 7 ++++++-
+ 3 files changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/coreutils/date.c b/coreutils/date.c
+index 9cbc7302f..d56343b1b 100644
+--- a/coreutils/date.c
++++ b/coreutils/date.c
+@@ -279,6 +279,9 @@ int date_main(int argc UNUSED_PARAM, char **argv)
+ 		time(&ts.tv_sec);
+ #endif
+ 	}
++#if !ENABLE_FEATURE_DATE_NANO
++	ts.tv_nsec = 0;
++#endif
+ 	localtime_r(&ts.tv_sec, &tm_time);
+ 
+ 	/* If date string is given, update tm_time, and maybe set date */
+@@ -303,7 +306,7 @@ int date_main(int argc UNUSED_PARAM, char **argv)
+ 		ts.tv_sec = validate_tm_time(date_str, &tm_time);
+ 
+ 		/* if setting time, set it */
+-		if ((opt & OPT_SET) && stime(&ts.tv_sec) < 0) {
++		if ((opt & OPT_SET) && clock_settime(CLOCK_REALTIME, &ts) < 0) {
+ 			bb_perror_msg("can't set date");
+ 		}
+ 	}
+diff --git a/libbb/missing_syscalls.c b/libbb/missing_syscalls.c
+index 87cf59b3d..dc40d9155 100644
+--- a/libbb/missing_syscalls.c
++++ b/libbb/missing_syscalls.c
+@@ -15,14 +15,6 @@ pid_t getsid(pid_t pid)
+ 	return syscall(__NR_getsid, pid);
+ }
+ 
+-int stime(const time_t *t)
+-{
+-	struct timeval tv;
+-	tv.tv_sec = *t;
+-	tv.tv_usec = 0;
+-	return settimeofday(&tv, NULL);
+-}
+-
+ int sethostname(const char *name, size_t len)
+ {
+ 	return syscall(__NR_sethostname, name, len);
+diff --git a/util-linux/rdate.c b/util-linux/rdate.c
+index 70f829e7f..f1b5ab77b 100644
+--- a/util-linux/rdate.c
++++ b/util-linux/rdate.c
+@@ -96,8 +96,13 @@ int rdate_main(int argc UNUSED_PARAM, char **argv)
+ 		if (time(NULL) == remote_time)
+ 			bb_error_msg("current time matches remote time");
+ 		else
+-			if (stime(&remote_time) < 0)
++		{
++			struct timespec ts;
++			ts.tv_sec = remote_time;
++			ts.tv_nsec = 0;
++			if (clock_settime(CLOCK_REALTIME, &ts) < 0)
+ 				bb_perror_msg_and_die("can't set time of day");
++		}
+ 	}
+ 
+ 	if (flags != 1) /* not lone -s */
+-- 
+2.25.1
+
