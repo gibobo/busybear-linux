@@ -10,7 +10,7 @@ clean:
 distclean: clean
 	rm -fr archives
 
-busybear.bin: scripts/build.sh
+busybear.bin:
 	./scripts/build.sh
 
 archive:

@@ -27,7 +27,7 @@ done
 # download and extract busybox, dropbear and linux
 #
 # ./scripts/fetch.sh
-git submodule update --init --recursive
+# git submodule update --init --recursive
 
 #
 # set default configurations
